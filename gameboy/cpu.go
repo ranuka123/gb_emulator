@@ -18,15 +18,15 @@ type Cpu struct {
 	interrupts struct {
 		master bool
 	}
-	memory         *Memory
+	bus            *Bus
 	stackPointer   uint16
 	programCounter uint16
 	mClock         uint16
 	tClock         uint16
 }
 
-func NewCpu(memory *Memory) *Cpu {
-	var cpu *Cpu = &Cpu{debug: false, breakpoint: 0x0297, memory: memory}
+func NewCpu(bus *Bus) *Cpu {
+	var cpu *Cpu = &Cpu{debug: false, breakpoint: 0x0297, bus: bus}
 	return cpu
 }
 
@@ -44,14 +44,14 @@ func (cpu *Cpu) Dump() {
 		cpu.stackPointer, cpu.programCounter-1)
 }
 
-func (cpu *Cpu) FetchDecodeExecute() {
+func (cpu *Cpu) Run() {
 	//fetch
 	/*
 		if cpu.debug && cpu.programCounter == cpu.breakpoint {
 			cpu.Dump()
 			os.Exit(0)
 		}*/
-	var instruction byte = cpu.memory.ReadByte(cpu.programCounter)
+	var instruction byte = cpu.bus.memory.ReadByte(cpu.programCounter)
 	//decode
 	var op *opCode = baseInstructionSet[instruction]
 	cpu.programCounter++
@@ -112,12 +112,12 @@ var baseInstructionSet []*opCode = []*opCode{
 		cpu.mClock++
 	}},
 	&opCode{"LD BC,d16", func(cpu *Cpu) {
-		cpu.registers.C = cpu.memory.ReadByte(cpu.programCounter)
-		cpu.registers.B = cpu.memory.ReadByte(cpu.programCounter + 1)
+		cpu.registers.C = cpu.bus.memory.ReadByte(cpu.programCounter)
+		cpu.registers.B = cpu.bus.memory.ReadByte(cpu.programCounter + 1)
 		cpu.programCounter += 2
 	}},
 	&opCode{"LD (BC),A", func(cpu *Cpu) {
-		cpu.memory.WriteByte((uint16(cpu.registers.B)<<8)|uint16(cpu.registers.C), cpu.registers.A)
+		cpu.bus.memory.WriteByte((uint16(cpu.registers.B)<<8)|uint16(cpu.registers.C), cpu.registers.A)
 	}},
 	&opCode{"INC BC", nil},
 	&opCode{"INC B", nil},
@@ -136,7 +136,7 @@ var baseInstructionSet []*opCode = []*opCode{
 		}
 	}},
 	&opCode{"LD B,d8", func(cpu *Cpu) {
-		cpu.registers.B = cpu.memory.ReadByte(cpu.programCounter)
+		cpu.registers.B = cpu.bus.memory.ReadByte(cpu.programCounter)
 		cpu.programCounter++
 	}},
 	&opCode{"RLCA", nil},
@@ -160,7 +160,7 @@ var baseInstructionSet []*opCode = []*opCode{
 		}
 	}},
 	&opCode{"LD C,d8", func(cpu *Cpu) {
-		cpu.registers.C = cpu.memory.ReadByte(cpu.programCounter)
+		cpu.registers.C = cpu.bus.memory.ReadByte(cpu.programCounter)
 		cpu.programCounter++
 	}},
 	&opCode{"RRCA", nil},
@@ -182,7 +182,7 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"RRA", nil},
 	&opCode{"JR NZ,r8", func(cpu *Cpu) {
 		if !cpu.isFlagSet('Z') {
-			var label uint8 = cpu.memory.ReadByte(cpu.programCounter)
+			var label uint8 = cpu.bus.memory.ReadByte(cpu.programCounter)
 			cpu.programCounter++
 			label = ^label + 1
 			cpu.programCounter -= uint16(label)
@@ -192,8 +192,8 @@ var baseInstructionSet []*opCode = []*opCode{
 
 	}},
 	&opCode{"LD HL,d16", func(cpu *Cpu) {
-		cpu.registers.L = cpu.memory.ReadByte(cpu.programCounter)
-		cpu.registers.H = cpu.memory.ReadByte(cpu.programCounter + 1)
+		cpu.registers.L = cpu.bus.memory.ReadByte(cpu.programCounter)
+		cpu.registers.H = cpu.bus.memory.ReadByte(cpu.programCounter + 1)
 		cpu.programCounter += 2
 	}},
 	&opCode{"LD (HL+),A", nil},
@@ -213,7 +213,7 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"JR NC,r8", nil},
 	&opCode{"LD SP,d16", nil},
 	&opCode{"LD (HL-),A", func(cpu *Cpu) {
-		cpu.memory.WriteByte((uint16(cpu.registers.H)<<8)+uint16(cpu.registers.L), cpu.registers.A)
+		cpu.bus.memory.WriteByte((uint16(cpu.registers.H)<<8)+uint16(cpu.registers.L), cpu.registers.A)
 		cpu.registers.L--
 		//if register L was a 0 then decrementing it would cause it to be 255 so we need to take the one from the H
 		if cpu.registers.L == 0xFF {
@@ -232,7 +232,7 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"INC A", nil},
 	&opCode{"DEC A", nil},
 	&opCode{"LD A,d8", func(cpu *Cpu) {
-		cpu.registers.A = cpu.memory.ReadByte(cpu.programCounter)
+		cpu.registers.A = cpu.bus.memory.ReadByte(cpu.programCounter)
 		cpu.programCounter++
 	}},
 	&opCode{"CCF", nil},
@@ -375,7 +375,7 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"POP BC", nil},
 	&opCode{"JP NZ,a16", nil},
 	&opCode{"JP a16", func(cpu *Cpu) {
-		cpu.programCounter = cpu.memory.ReadWord(cpu.programCounter)
+		cpu.programCounter = cpu.bus.memory.ReadWord(cpu.programCounter)
 	}},
 	&opCode{"CALL NZ,a16", nil},
 	&opCode{"PUSH BC", nil},
@@ -406,7 +406,7 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"SBC A,d8", nil},
 	&opCode{"RST 18H", nil},
 	&opCode{"LDH (a8),A", func(cpu *Cpu) {
-		cpu.memory.WriteByte(0xFF00+uint16(cpu.memory.ReadByte(cpu.programCounter)), cpu.registers.A)
+		cpu.bus.memory.WriteByte(0xFF00+uint16(cpu.bus.memory.ReadByte(cpu.programCounter)), cpu.registers.A)
 		cpu.programCounter++
 	}},
 	&opCode{"POP HL", nil},
@@ -425,7 +425,7 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"XOR d8", nil},
 	&opCode{"RST 28H", nil},
 	&opCode{"LDH A,(a8)", func(cpu *Cpu) {
-		cpu.registers.A = cpu.memory.ReadByte(0xFF00 + uint16(cpu.memory.ReadByte(cpu.programCounter)))
+		cpu.registers.A = cpu.bus.memory.ReadByte(0xFF00 + uint16(cpu.bus.memory.ReadByte(cpu.programCounter)))
 		cpu.programCounter++
 	}},
 	&opCode{"POP AF", nil},

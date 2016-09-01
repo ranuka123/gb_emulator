@@ -51,10 +51,11 @@ type Memory struct {
 	bios     []byte
 	readBios bool
 	ram      map[uint16]byte //65535 bytes of memory
+	bus      *Bus
 }
 
-func NewMemory() (memory *Memory) {
-	memory = &Memory{bios, true, make(map[uint16]byte)}
+func NewMemory(bus *Bus) (memory *Memory) {
+	memory = &Memory{bios, true, make(map[uint16]byte), bus}
 	var baseAddr uint16 = 0x0000
 	for baseAddr != 0xFFFF {
 		memory.ram[baseAddr] = 0
@@ -94,6 +95,9 @@ func (memory *Memory) ReadWord(address uint16) uint16 {
 
 func (memory *Memory) WriteByte(address uint16, _byte byte) {
 	memory.ram[address] = _byte
+	if mask := address & 0xF000; mask == 0x9000 || mask == 0x8000 {
+		//memory.bus.gpu.UpdateTile(address)
+	}
 }
 
 func (memory *Memory) WriteWord(address uint16, word uint16) {
