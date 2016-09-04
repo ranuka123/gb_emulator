@@ -2,6 +2,7 @@ package gameboy
 
 import (
 	"log"
+	"os"
 )
 
 type opCode struct {
@@ -15,18 +16,15 @@ type Cpu struct {
 	registers  struct {
 		A, B, C, D, E, F, H, L byte
 	}
-	interrupts struct {
-		master bool
-	}
-	bus            *Bus
-	stackPointer   uint16
-	programCounter uint16
-	mClock         uint16
-	tClock         uint16
+	masterInterrupt bool
+	bus             *Bus
+	stackPointer    uint16
+	programCounter  uint16
+	clock           uint16
 }
 
 func NewCpu(bus *Bus) *Cpu {
-	var cpu *Cpu = &Cpu{debug: false, breakpoint: 0x0297, bus: bus}
+	var cpu *Cpu = &Cpu{debug: false, breakpoint: 0x02b4, bus: bus}
 	return cpu
 }
 
@@ -41,24 +39,25 @@ func (cpu *Cpu) Dump() {
 
 		cpu.registers.A, cpu.registers.F, cpu.registers.B, cpu.registers.C,
 		cpu.registers.D, cpu.registers.E, cpu.registers.H, cpu.registers.L,
-		cpu.stackPointer, cpu.programCounter-1)
+		cpu.stackPointer, cpu.programCounter)
 }
 
-func (cpu *Cpu) Run() {
+func (cpu *Cpu) Update() {
 	//fetch
-	/*
-		if cpu.debug && cpu.programCounter == cpu.breakpoint {
-			cpu.Dump()
-			os.Exit(0)
-		}*/
 	var instruction byte = cpu.bus.memory.ReadByte(cpu.programCounter)
 	//decode
 	var op *opCode = baseInstructionSet[instruction]
-	cpu.programCounter++
+	if cpu.debug && cpu.programCounter == cpu.breakpoint {
+		log.Printf("Stopped at instruction %s: \n", op.name)
+		cpu.Dump()
+		os.Exit(0)
+	}
+	cpu.clock += uint16(ticksPerInstruction[instruction])
 	if op.exec == nil {
 		cpu.Dump()
 		log.Fatalf("Unable to run instruction: %s %x", op.name, instruction)
 	}
+	cpu.programCounter++
 	//execute
 	op.exec(cpu)
 
@@ -109,7 +108,6 @@ func (cpu *Cpu) isFlagSet(flag byte) bool {
 
 var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"NOP", func(cpu *Cpu) {
-		cpu.mClock++
 	}},
 	&opCode{"LD BC,d16", func(cpu *Cpu) {
 		cpu.registers.C = cpu.bus.memory.ReadByte(cpu.programCounter)
@@ -354,6 +352,7 @@ var baseInstructionSet []*opCode = []*opCode{
 		} else {
 			cpu.clearFlags('Z')
 		}
+		cpu.clearFlags('C', 'N', 'H')
 	}},
 	&opCode{"OR B", nil},
 	&opCode{"OR C", nil},
@@ -425,13 +424,14 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"XOR d8", nil},
 	&opCode{"RST 28H", nil},
 	&opCode{"LDH A,(a8)", func(cpu *Cpu) {
-		cpu.registers.A = cpu.bus.memory.ReadByte(0xFF00 + uint16(cpu.bus.memory.ReadByte(cpu.programCounter)))
+		location := 0xFF00 + uint16(cpu.bus.memory.ReadByte(cpu.programCounter))
+		cpu.registers.A = cpu.bus.memory.ReadByte(location)
 		cpu.programCounter++
 	}},
 	&opCode{"POP AF", nil},
 	&opCode{"LD A,(C)", nil},
 	&opCode{"DI", func(cpu *Cpu) {
-		cpu.interrupts.master = false
+		cpu.masterInterrupt = false
 	}},
 	&opCode{" ", nil},
 	&opCode{"PUSH AF", nil},
@@ -443,8 +443,49 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"EI", nil},
 	&opCode{" ", nil},
 	&opCode{" ", nil},
-	&opCode{"CP d8", nil},
+	&opCode{"CP d8", func(cpu *Cpu) {
+		value := cpu.bus.memory.ReadByte(cpu.programCounter)
+		aCopy := cpu.registers.A - value
+		cpu.setFlags('N')
+		if aCopy == value {
+			cpu.setFlags('Z')
+		} else {
+			cpu.clearFlags('Z')
+		}
+
+		if value > aCopy {
+			cpu.setFlags('C')
+		} else {
+			cpu.clearFlags('C')
+		}
+
+		if (value & 0x0F) > (aCopy & 0x0F) {
+			cpu.setFlags('H')
+		} else {
+			cpu.clearFlags('H')
+		}
+		cpu.programCounter++
+	}},
 	&opCode{"RST 38H", nil},
+}
+
+var ticksPerInstruction []uint8 = []uint8{
+	4, 12, 8, 8, 4, 4, 8, 8, 40, 8, 8, 8, 4, 4, 8, 8,
+	4, 12, 8, 8, 4, 4, 8, 8, 8, 8, 8, 8, 4, 4, 8, 8,
+	0, 12, 8, 8, 4, 4, 8, 4, 0, 8, 8, 8, 4, 4, 8, 4,
+	8, 12, 8, 8, 12, 12, 12, 4, 0, 8, 8, 8, 4, 4, 8, 4,
+	4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4,
+	4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4,
+	4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4,
+	8, 8, 8, 8, 8, 8, 4, 8, 4, 4, 4, 4, 4, 4, 8, 4,
+	4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4,
+	4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4,
+	4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4,
+	4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4,
+	0, 12, 0, 12, 0, 16, 8, 16, 0, 4, 0, 0, 0, 12, 8, 16,
+	0, 12, 0, 0, 0, 16, 8, 16, 0, 16, 0, 0, 0, 0, 8, 16,
+	12, 12, 8, 0, 0, 16, 8, 16, 16, 4, 16, 0, 0, 0, 8, 16,
+	12, 12, 8, 4, 0, 16, 8, 16, 12, 8, 16, 4, 0, 0, 8, 16,
 }
 
 /*

@@ -17,6 +17,8 @@ type Bus struct {
 	gpu    *Gpu
 }
 
+const MAX_CYCLES_PER_SECOND int = 69905
+
 func New() (gameboy *Gameboy) {
 	var bus *Bus = &Bus{nil, nil, nil}
 	memory, cpu, gpu := NewMemory(bus), NewCpu(bus), NewGpu(bus)
@@ -45,8 +47,10 @@ func (gameboy *Gameboy) LoadRom(fileName string) {
 }
 
 func (gameboy *Gameboy) Run() {
+
 	for {
-		gameboy.bus.cpu.Run()
-		//gameboy.bus.gpu.Run()
+		gameboy.bus.cpu.Update()
+		gameboy.bus.gpu.Update()
+		gameboy.bus.cpu.CheckInterrupts()
 	}
 }

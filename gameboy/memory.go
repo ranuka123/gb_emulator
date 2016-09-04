@@ -1,14 +1,20 @@
 package gameboy
 
-/*Memory map
-bios                 //0x0000 - 0x00FF
-romBank              //0x0000 - 0x7FFF
-video                //0x8000 - 0x9FFF
-cartridge            //0xA000 - 0xBFFF
-workRam              //0xC000 - 0xDFFF working ram
-spriteAttributeTable //0xFE00 - 0xFE9F
-io                   //0xFF00 - 0xFF7F i/o memory
-highMem              //0xFF80 - 0xFFFF high speed ram
+//import "log"
+
+/*
+Memory map          | start - end  |
+----------------------------------------------------
+bios                 0x0000 - 0x00FF
+romBank              0x0000 - 0x7FFF
+video                0x8000 - 0x9FFF
+cartridge            0xA000 - 0xBFFF
+workRam              0xC000 - 0xDFFF working ram
+spriteAttributeTable 0xFE00 - 0xFE9F
+io                   0xFF00 - 0xFF7F i/o memory
+highMem              0xFF80 - 0xFFFF high speed ram
+interrupt enable     0xFFFF
+interrupt flags	     0xFF0F
 */
 
 var bios []byte = []byte{
@@ -83,6 +89,8 @@ func (memory *Memory) ReadByte(address uint16) byte {
 
 	if isEcho(address) {
 		return memory.ram[address-0x2000]
+	} else if address == 0xFF44 {
+		return memory.bus.gpu.GetCurrentLine()
 	}
 
 	return memory.ram[address]
@@ -95,14 +103,23 @@ func (memory *Memory) ReadWord(address uint16) uint16 {
 
 func (memory *Memory) WriteByte(address uint16, _byte byte) {
 	memory.ram[address] = _byte
-	if mask := address & 0xF000; mask == 0x9000 || mask == 0x8000 {
-		//memory.bus.gpu.UpdateTile(address)
+
+	if isEcho(address) {
+		//a write to echo also writes to RAM
+		memory.WriteByte(address-0x2000, _byte)
+	} else if mask := address & 0xF000; mask == 0x9000 || mask == 0x8000 {
+		memory.bus.gpu.SetTile(address)
+	} else if address == 0xFF40 {
+		memory.bus.gpu.SetControl(_byte)
+	} else if address == 0xFF42 {
+		memory.bus.gpu.SetScrollY(_byte)
 	}
+
 }
 
 func (memory *Memory) WriteWord(address uint16, word uint16) {
-	memory.ram[address] = byte(word & 0x00ff)
-	memory.ram[address+1] = byte(word & 0xff00 >> 8)
+	memory.WriteByte(address, byte(word&0x00ff))
+	memory.WriteByte(address+1, byte((word&0xff00)>>8))
 }
 
 //checks if the address is a call to the echo region of the memory map
@@ -112,7 +129,7 @@ func isEcho(address uint16) bool {
 	if mask == 0xE000 {
 		return true
 	}
-	if mask == 0xF000 && ((mask & 0x0F00) < 0xE00) {
+	if mask == 0xF000 && ((address & 0xF00) < 0xE00) {
 		return true
 	}
 	return false
