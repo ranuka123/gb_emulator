@@ -1,7 +1,5 @@
 package gameboy
 
-//import "log"
-
 /*
 Memory map          | start - end  |
 ----------------------------------------------------
@@ -107,7 +105,7 @@ func (memory *Memory) WriteByte(address uint16, _byte byte) {
 	if isEcho(address) {
 		//a write to echo also writes to RAM
 		memory.WriteByte(address-0x2000, _byte)
-	} else if mask := address & 0xF000; mask == 0x9000 || mask == 0x8000 {
+	} else if mask := address & 0xF000; (mask == 0x9000 || mask == 0x8000) && address <= 0x97FF {
 		memory.bus.gpu.SetTile(address)
 	} else if address == 0xFF40 {
 		memory.bus.gpu.SetControl(_byte)
