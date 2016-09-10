@@ -1,6 +1,7 @@
 package gameboy
 
 import (
+	"gameboyemu/gameboy/cpu"
 	"io/ioutil"
 	"log"
 )
@@ -12,19 +13,24 @@ type Gameboy struct {
 //allows the components in the gameboy to communicate
 //with other components
 type Bus struct {
-	cpu    *Cpu
+	cpu    *cpu.Cpu
 	memory *Memory
 	gpu    *Gpu
+}
+
+type CpuBus struct {
+	*Memory
 }
 
 const MAX_CYCLES_PER_SECOND int = 69905
 
 func New() (gameboy *Gameboy) {
 	var bus *Bus = &Bus{nil, nil, nil}
-	memory, cpu, gpu := NewMemory(bus), NewCpu(bus), NewGpu(bus)
+	memory := NewMemory(bus)
+	var cpuBus CpuBus = CpuBus{memory}
+	cpu, gpu := cpu.NewCpu(cpuBus, 0x100), NewGpu(bus)
 	bus.memory, bus.cpu, bus.gpu = memory, cpu, gpu
 	gameboy = &Gameboy{bus}
-	gameboy.bus.cpu.programCounter = 0x100
 	return gameboy
 }
 

@@ -1,5 +1,7 @@
 package gameboy
 
+import "gameboyemu/gameboy/cpu"
+
 var paletteOptions = [4][4]uint8{{255, 255, 255, 255}, {192, 192, 192, 255}, {96, 96, 96, 255}, {0, 0, 0, 255}}
 
 //Gpu modes
@@ -28,7 +30,7 @@ func NewGpu(bus *Bus) (gpu *Gpu) {
 }
 
 func (gpu *Gpu) Update() {
-	gpu.clock += gpu.bus.cpu.clock
+	gpu.clock += gpu.bus.cpu.Clock()
 	modes[gpu.mode](gpu)
 }
 
@@ -100,8 +102,8 @@ func (gpu *Gpu) hBlank() {
 		if gpu.currentLine == 143 {
 			gpu.mode = 1
 			//time to call vblank interrupt
-			if interruptsEnabled := gpu.bus.memory.ReadByte(0xFFFF); interruptsEnabled&VBLANK != 0 {
-				interruptFlags := gpu.bus.memory.ReadByte(0xFF0F) | VBLANK
+			if interruptsEnabled := gpu.bus.memory.ReadByte(0xFFFF); interruptsEnabled&cpu.VBLANK != 0 {
+				interruptFlags := gpu.bus.memory.ReadByte(0xFF0F) | cpu.VBLANK
 				gpu.bus.memory.WriteByte(0xFF0F, interruptFlags)
 			}
 		} else {
