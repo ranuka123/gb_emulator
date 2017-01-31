@@ -24,7 +24,12 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"LD (a16),SP", nil},
 	&opCode{"ADD HL,BC", nil},
 	&opCode{"LD A,(BC)", nil},
-	&opCode{"DEC BC", nil},
+	&opCode{"DEC BC", func(cpu *Cpu) {
+		cpu.decrementRegister(&cpu.registers.C)
+		if cpu.registers.C == 0xFF {
+			cpu.decrementRegister(&cpu.registers.B)
+		}
+	}},
 	&opCode{"INC C", func(cpu *Cpu) {
 		cpu.incrementRegister(&cpu.registers.C)
 	}},
@@ -172,7 +177,9 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"LD (HL),L", nil},
 	&opCode{"HALT", nil},
 	&opCode{"LD (HL),A", nil},
-	&opCode{"LD A,B", nil},
+	&opCode{"LD A,B", func(cpu *Cpu) {
+		cpu.registers.A = cpu.registers.B
+	}},
 	&opCode{"LD A,C", nil},
 	&opCode{"LD A,D", nil},
 	&opCode{"LD A,E", nil},
@@ -231,7 +238,9 @@ var baseInstructionSet []*opCode = []*opCode{
 		cpu.xorRegister(&cpu.registers.A)
 	}},
 	&opCode{"OR B", nil},
-	&opCode{"OR C", nil},
+	&opCode{"OR C", func(cpu *Cpu) {
+		cpu.orRegister(cpu.registers.C)
+	}},
 	&opCode{"OR D", nil},
 	&opCode{"OR E", nil},
 	&opCode{"OR H", nil},
@@ -257,7 +266,9 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"ADD A,d8", nil},
 	&opCode{"RST 00H", nil},
 	&opCode{"RET Z", nil},
-	&opCode{"RET", nil},
+	&opCode{"RET", func(cpu *Cpu) {
+		cpu.programCounter = cpu.fromStack()
+	}},
 	&opCode{"JP Z,a16", nil},
 	&opCode{"PREFIX CB", nil},
 	&opCode{"CALL Z,a16", nil},
@@ -330,7 +341,9 @@ var baseInstructionSet []*opCode = []*opCode{
 	&opCode{"LD HL,SP+r8", nil},
 	&opCode{"LD SP,HL", nil},
 	&opCode{"LD A,(a16)", nil},
-	&opCode{"EI", nil},
+	&opCode{"EI", func(cpu *Cpu) {
+		cpu.masterInterrupt = true
+	}},
 	&opCode{" ", nil},
 	&opCode{" ", nil},
 	&opCode{"CP d8", func(cpu *Cpu) {

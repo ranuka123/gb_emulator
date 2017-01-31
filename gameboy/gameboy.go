@@ -24,11 +24,11 @@ type CpuBus struct {
 
 const MAX_CYCLES_PER_SECOND int = 69905
 
-func New() (gameboy *Gameboy) {
+func New(bpAddr uint16) (gameboy *Gameboy) {
 	var bus *Bus = &Bus{nil, nil, nil}
 	memory := NewMemory(bus)
 	var cpuBus CpuBus = CpuBus{memory}
-	cpu, gpu := cpu.NewCpu(cpuBus, 0x100), NewGpu(bus)
+	cpu, gpu := cpu.NewCpu(cpuBus, 0x100, bpAddr), NewGpu(bus)
 	bus.memory, bus.cpu, bus.gpu = memory, cpu, gpu
 	gameboy = &Gameboy{bus}
 	return gameboy

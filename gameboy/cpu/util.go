@@ -1,6 +1,17 @@
 package cpu
 
-//common operations used in the instructions defined here
+//common operations used in instructions defined here
+func (cpu *Cpu) orRegister(register byte) {
+	cpu.registers.A |= register
+	if cpu.registers.A == 0 {
+		cpu.setFlags('Z')
+	} else {
+		cpu.clearFlags('Z')
+	}
+	cpu.clearFlags('C', 'N', 'H')
+
+}
+
 func (cpu *Cpu) incrementRegister(register *byte) {
 	cpu.clearFlags('N')
 	if (*register & 0x0F) == 0 {
@@ -59,4 +70,10 @@ func (cpu *Cpu) xorRegister(register *byte) {
 func (cpu *Cpu) toStack(word uint16) {
 	cpu.stackPointer -= 2
 	cpu.bus.WriteWord(cpu.stackPointer, word)
+}
+
+func (cpu *Cpu) fromStack() uint16 {
+	word := cpu.bus.ReadWord(cpu.stackPointer)
+	cpu.stackPointer += 2
+	return word
 }

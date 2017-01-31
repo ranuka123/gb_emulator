@@ -11,7 +11,7 @@ type opCode struct {
 }
 
 type Cpu struct {
-	debug      bool
+	debug      uint
 	breakpoint uint16
 	registers  struct {
 		A, B, C, D, E, F, H, L byte
@@ -23,8 +23,8 @@ type Cpu struct {
 	clock           uint16
 }
 
-func NewCpu(bus Bus, counter uint16) *Cpu {
-	var cpu *Cpu = &Cpu{debug: false, breakpoint: 0x02e3, bus: bus, programCounter: counter}
+func NewCpu(bus Bus, counter uint16, breakpoint uint16) *Cpu {
+	var cpu *Cpu = &Cpu{debug: 1, breakpoint: breakpoint, bus: bus, programCounter: counter}
 	return cpu
 }
 
@@ -47,10 +47,10 @@ func (cpu *Cpu) Update() {
 	var instruction byte = cpu.bus.ReadByte(cpu.programCounter)
 	//decode
 	var op *opCode = baseInstructionSet[instruction]
-	if cpu.debug {
-		log.Printf("Running instruction %s PC: %x: \n", op.name, cpu.programCounter)
+	if cpu.debug == 1 {
+		log.Printf("%s %x \n", op.name, cpu.programCounter)
 	}
-	if cpu.debug && cpu.programCounter == cpu.breakpoint {
+	if cpu.debug == 1 && cpu.programCounter == cpu.breakpoint {
 		log.Printf("Stopped at instruction %s: \n", op.name)
 		cpu.Dump()
 		os.Exit(0)
