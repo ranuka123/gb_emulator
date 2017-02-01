@@ -55,11 +55,11 @@ func (cpu *Cpu) Update() {
 		cpu.Dump()
 		os.Exit(0)
 	}
-	cpu.clock += uint16(ticksPerInstruction[instruction])
-	if op.exec == nil {
+	if ticksPerInstruction[instruction] == 0 {
 		cpu.Dump()
-		log.Fatalf("Unable to run instruction: %s %x", op.name, instruction)
+		log.Fatalf("0 tick instruction found %s", op.name)
 	}
+	cpu.clock += uint16(ticksPerInstruction[instruction])
 	cpu.programCounter++
 	//execute
 	op.exec(cpu)
