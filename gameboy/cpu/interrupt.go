@@ -1,5 +1,7 @@
 package cpu
 
+//import "fmt"
+
 //interrupt bit positions for memory addresses 0xFFFF 0xFF0F
 //ranked in order of interrupt priority with vblank being the most important
 const (
@@ -16,7 +18,7 @@ func (cpu *Cpu) CheckInterrupts() {
 	interruptsEnabled := cpu.bus.ReadByte(0xFFFF)
 	interruptFlags := cpu.bus.ReadByte(0xFF0F)
 	//if master interrupt is on, there are interrupts enabled and interrupt flags are set
-	//we run the cpu interrupt handler
+	//run the cpu interrupt handler
 	if cpu.masterInterrupt && interruptsEnabled != 0 && interruptFlags != 0 {
 		//check which interrupts to handle by masking off the unset or unflagged interrupts
 		interruptsToCheck := interruptsEnabled & interruptFlags
@@ -27,27 +29,19 @@ func (cpu *Cpu) CheckInterrupts() {
 			cpu.bus.WriteByte(0xFF0F, interruptFlags)
 			//cpu.bus.screen.RenderScreen()
 			cpu.runHandler(VBLANK)
-		}
-
-		if interruptsToCheck&LCD_STAT != 0 {
+		} else if interruptsToCheck&LCD_STAT != 0 {
 			interruptFlags &^= LCD_STAT
 			cpu.bus.WriteByte(0xFF0F, interruptFlags)
 			cpu.runHandler(LCD_STAT)
-		}
-
-		if interruptsToCheck&TIMER != 0 {
+		} else if interruptsToCheck&TIMER != 0 {
 			interruptFlags &^= TIMER
 			cpu.bus.WriteByte(0xFF0F, interruptFlags)
 			cpu.runHandler(TIMER)
-		}
-
-		if interruptsToCheck&SERIAL != 0 {
+		} else if interruptsToCheck&SERIAL != 0 {
 			interruptFlags &^= SERIAL
 			cpu.bus.WriteByte(0xFF0F, interruptFlags)
 			cpu.runHandler(SERIAL)
-		}
-
-		if interruptsToCheck&JOYPAD != 0 {
+		} else if interruptsToCheck&JOYPAD != 0 {
 			interruptFlags &^= JOYPAD
 			cpu.bus.WriteByte(0xFF0F, interruptFlags)
 			cpu.runHandler(JOYPAD)
@@ -63,7 +57,7 @@ func (cpu *Cpu) runHandler(interrupt uint8) {
 	cpu.stackPointer -= 2
 	cpu.bus.WriteWord(cpu.stackPointer, cpu.programCounter)
 
-	cpu.programCounter = interruptCounters[interrupt]
+	cpu.programCounter = interruptCounters[interrupt-1]
 	cpu.clock += 12
 
 }
