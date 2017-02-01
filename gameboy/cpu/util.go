@@ -1,6 +1,17 @@
 package cpu
 
 //common operations used in instructions defined here
+func (cpu *Cpu) andRegister(register byte) {
+	cpu.registers.A &= register
+	if cpu.registers.A == 0 {
+		cpu.setFlags('Z')
+	} else {
+		cpu.clearFlags('Z')
+	}
+	cpu.clearFlags('C', 'N', 'H')
+
+}
+
 func (cpu *Cpu) orRegister(register byte) {
 	cpu.registers.A |= register
 	if cpu.registers.A == 0 {
