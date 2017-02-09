@@ -17,12 +17,10 @@ var baseInstructionSet []*opCode = []*opCode{
 		cpu.bus.WriteByte((uint16(cpu.registers.B)<<8)|uint16(cpu.registers.C), cpu.registers.A)
 	}},
 	&opCode{"INC BC", func(cpu *Cpu) {
-		cpu.Dump()
-		os.Exit(1)
+		cpu.incrementRegisters(&cpu.registers.B, &cpu.registers.C)
 	}},
 	&opCode{"INC B", func(cpu *Cpu) {
-		cpu.Dump()
-		os.Exit(1)
+		cpu.incrementRegister(&cpu.registers.B)
 	}},
 	&opCode{"DEC B", func(cpu *Cpu) {
 		cpu.decrementRegister(&cpu.registers.B)
@@ -52,10 +50,7 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"DEC BC", func(cpu *Cpu) {
-		cpu.decrementRegister(&cpu.registers.C)
-		if cpu.registers.C == 0xFF {
-			cpu.decrementRegister(&cpu.registers.B)
-		}
+		cpu.decrementRegisters(&cpu.registers.B, &cpu.registers.C)
 	}},
 	&opCode{"INC C", func(cpu *Cpu) {
 		cpu.incrementRegister(&cpu.registers.C)
@@ -88,19 +83,13 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"INC DE", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.incrementRegisters(&cpu.registers.D, &cpu.registers.E)
 	}},
 	&opCode{"INC D", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.incrementRegister(&cpu.registers.D)
 	}},
 	&opCode{"DEC D", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.decrementRegister(&cpu.registers.D)
 	}},
 	&opCode{"LD D,d8", func(cpu *Cpu) {
 
@@ -128,19 +117,13 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"DEC DE", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.decrementRegisters(&cpu.registers.D, &cpu.registers.E)
 	}},
 	&opCode{"INC E", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.incrementRegister(&cpu.registers.E)
 	}},
 	&opCode{"DEC E", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.decrementRegister(&cpu.registers.E)
 	}},
 	&opCode{"LD E,d8", func(cpu *Cpu) {
 
@@ -180,19 +163,13 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"INC HL", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.incrementRegisters(&cpu.registers.H, &cpu.registers.L)
 	}},
 	&opCode{"INC H", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.incrementRegister(&cpu.registers.H)
 	}},
 	&opCode{"DEC H", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.decrementRegister(&cpu.registers.H)
 	}},
 	&opCode{"LD H,d8", func(cpu *Cpu) {
 
@@ -230,19 +207,13 @@ var baseInstructionSet []*opCode = []*opCode{
 		cpu.incrementRegisters(&cpu.registers.H, &cpu.registers.L)
 	}},
 	&opCode{"DEC HL", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.decrementRegisters(&cpu.registers.H, &cpu.registers.L)
 	}},
 	&opCode{"INC L", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.incrementRegister(&cpu.registers.L)
 	}},
 	&opCode{"DEC L", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.decrementRegister(&cpu.registers.L)
 	}},
 	&opCode{"LD L,d8", func(cpu *Cpu) {
 
@@ -273,9 +244,10 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"INC (HL)", func(cpu *Cpu) {
+		b := cpu.bus.ReadByte((uint16(cpu.registers.H) << 8) + uint16(cpu.registers.L))
+		cpu.incrementRegister(&b)
+		cpu.bus.WriteByte((uint16(cpu.registers.H)<<8)+uint16(cpu.registers.L), b)
 
-		cpu.Dump()
-		os.Exit(1)
 	}},
 	&opCode{"DEC (HL)", func(cpu *Cpu) {
 
@@ -315,14 +287,10 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"INC A", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.incrementRegister(&cpu.registers.A)
 	}},
 	&opCode{"DEC A", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.decrementRegister(&cpu.registers.A)
 	}},
 	&opCode{"LD A,d8", func(cpu *Cpu) {
 		cpu.registers.A = cpu.bus.ReadByte(cpu.programCounter)
@@ -837,34 +805,22 @@ var baseInstructionSet []*opCode = []*opCode{
 		cpu.andRegister(cpu.registers.A)
 	}},
 	&opCode{"XOR B", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.xorRegister(cpu.registers.B)
 	}},
 	&opCode{"XOR C", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.xorRegister(cpu.registers.C)
 	}},
 	&opCode{"XOR D", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.xorRegister(cpu.registers.D)
 	}},
 	&opCode{"XOR E", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.xorRegister(cpu.registers.E)
 	}},
 	&opCode{"XOR H", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.xorRegister(cpu.registers.H)
 	}},
 	&opCode{"XOR L", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.xorRegister(cpu.registers.L)
 	}},
 	&opCode{"XOR (HL)", func(cpu *Cpu) {
 
@@ -872,45 +828,31 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"XOR A", func(cpu *Cpu) {
-		cpu.xorRegister(&cpu.registers.A)
+		cpu.xorRegister(cpu.registers.A)
 	}},
 	&opCode{"OR B", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.orRegister(cpu.registers.B)
 	}},
 	&opCode{"OR C", func(cpu *Cpu) {
 		cpu.orRegister(cpu.registers.C)
 	}},
 	&opCode{"OR D", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.orRegister(cpu.registers.D)
 	}},
 	&opCode{"OR E", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.orRegister(cpu.registers.E)
 	}},
 	&opCode{"OR H", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.orRegister(cpu.registers.H)
 	}},
 	&opCode{"OR L", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.orRegister(cpu.registers.L)
 	}},
 	&opCode{"OR (HL)", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.orRegister(cpu.bus.ReadByte((uint16(cpu.registers.H) << 8) | uint16(cpu.registers.L)))
 	}},
 	&opCode{"OR A", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.orRegister(cpu.registers.A)
 	}},
 	&opCode{"CP B", func(cpu *Cpu) {
 
@@ -953,14 +895,15 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"RET NZ", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		if !cpu.isFlagSet('Z') {
+			cpu.programCounter = cpu.fromStack()
+			cpu.clock += 12
+		}
 	}},
 	&opCode{"POP BC", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		word := cpu.fromStack()
+		cpu.registers.C = byte((0xFF00 & word) >> 8)
+		cpu.registers.B = byte(0x00FF & word)
 	}},
 	&opCode{"JP NZ,a16", func(cpu *Cpu) {
 
@@ -989,9 +932,10 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"RET Z", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		if cpu.isFlagSet('Z') {
+			cpu.programCounter = cpu.fromStack()
+			cpu.clock += 12
+		}
 	}},
 	&opCode{"RET", func(cpu *Cpu) {
 		cpu.programCounter = cpu.fromStack()
@@ -1034,9 +978,9 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"POP DE", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		word := cpu.fromStack()
+		cpu.registers.E = byte((0xFF00 & word) >> 8)
+		cpu.registers.D = byte(0x00FF & word)
 	}},
 	&opCode{"JP NC,a16", func(cpu *Cpu) {
 
@@ -1072,7 +1016,7 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"RETI", func(cpu *Cpu) {
-
+		cpu.masterInterrupt = true
 		cpu.Dump()
 		os.Exit(1)
 	}},
@@ -1111,9 +1055,9 @@ var baseInstructionSet []*opCode = []*opCode{
 		cpu.programCounter++
 	}},
 	&opCode{"POP HL", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		word := cpu.fromStack()
+		cpu.registers.L = byte((0xFF00 & word) >> 8)
+		cpu.registers.H = byte(0x00FF & word)
 	}},
 	&opCode{"LD (C),A", func(cpu *Cpu) {
 		cpu.bus.WriteByte(0xFF00+uint16(cpu.registers.C), cpu.registers.A)
@@ -1129,7 +1073,7 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"PUSH HL", func(cpu *Cpu) {
-		cpu.toStack((uint16(cpu.registers.H) << 8) | uint16(cpu.registers.L))
+		cpu.toStack((uint16(cpu.registers.L) << 8) | uint16(cpu.registers.H))
 	}},
 	&opCode{"AND d8", func(cpu *Cpu) {
 
@@ -1189,9 +1133,9 @@ var baseInstructionSet []*opCode = []*opCode{
 		cpu.programCounter++
 	}},
 	&opCode{"POP AF", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		word := cpu.fromStack()
+		cpu.registers.F = byte((0xFF00 & word) >> 8)
+		cpu.registers.A = byte(0x00FF & word)
 	}},
 	&opCode{"LD A,(C)", func(cpu *Cpu) {
 
@@ -1230,9 +1174,8 @@ var baseInstructionSet []*opCode = []*opCode{
 		os.Exit(1)
 	}},
 	&opCode{"LD A,(a16)", func(cpu *Cpu) {
-
-		cpu.Dump()
-		os.Exit(1)
+		cpu.registers.A = cpu.bus.ReadByte(cpu.bus.ReadWord(cpu.programCounter))
+		cpu.programCounter += 2
 	}},
 	&opCode{"EI", func(cpu *Cpu) {
 		cpu.masterInterrupt = true
@@ -1284,7 +1227,7 @@ var ticksPerInstruction []uint8 = []uint8{
 	4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4,
 	4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4,
 	4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4,
-	0, 12, 0, 12, 0, 16, 8, 16, 0, 4, 0, 0, 0, 12, 8, 16,
+	8, 12, 0, 12, 0, 16, 8, 16, 8, 4, 0, 0, 0, 12, 8, 16,
 	0, 12, 0, 0, 0, 16, 8, 16, 0, 16, 0, 0, 0, 0, 8, 16,
 	12, 12, 8, 0, 0, 16, 8, 16, 16, 4, 16, 0, 0, 0, 8, 16,
 	12, 12, 8, 4, 0, 16, 8, 16, 12, 8, 16, 4, 0, 0, 8, 16,
